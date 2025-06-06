@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dollar Alert Bolivia</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    Dollar Alert Bolivia
+                    <span class="flag">🇧🇴</span>
+                </div>
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>En vivo</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="app-grid">
+                <!-- Exchange Rate Display -->
+                <div class="card">
+                    <h2>
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                        Tipo de Cambio Actual
+                    </h2>
+                    <div class="rate-display">
+                        <div class="currency-pair">USD → BOB</div>
+                        <div class="rate-value loading" id="exchangeRate">---.--</div>
+                        <div class="rate-unit">Bolivianos por Dólar</div>
+                        <div class="last-updated" id="lastUpdated">Cargando...</div>
+                    </div>
+                </div>
+
+                <!-- Alert Setup -->
+                <div class="card">
+                    <h2>
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                            <line x1="12" y1="9" x2="12" y2="13"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        Configurar Alerta
+                    </h2>
+                    <form id="alertForm">
+                        <div class="form-group">
+                            <label for="alertThreshold">Umbral de Alerta (BOB)</label>
+                            <input 
+                                type="number" 
+                                id="alertThreshold" 
+                                name="alertThreshold" 
+                                step="0.01" 
+                                min="1" 
+                                max="20" 
+                                placeholder="Ej: 6.96"
+                                required
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="alertType">Tipo de Alerta</label>
+                            <select id="alertType" name="alertType">
+                                <option value="above">Cuando esté por encima</option>
+                                <option value="below">Cuando esté por debajo</option>
+                                <option value="both">Ambos</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn">Guardar Alerta</button>
+                    </form>
+                    <div class="alert-status hidden" id="alertStatus">
+                        ✅ Alerta configurada correctamente
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Dollar Alert Bolivia. Desarrollado para el mercado boliviano. 🇧🇴</p>
+        </div>
+    </footer>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
