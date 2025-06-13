@@ -1,6 +1,7 @@
 /**
  * ChartManager - Handles historical exchange rate chart display
  * Uses Chart.js for responsive line chart of USD to BOB rates
+ * Enhanced with debugging and error handling
  */
 export class ChartManager {
     constructor() {
@@ -8,6 +9,7 @@ export class ChartManager {
         this.canvas = null;
         this.historicalData = [];
         this.isLoading = false;
+        this.debugMode = true; // Set to false in production
         
         // Chart configuration
         this.chartConfig = {
@@ -159,31 +161,74 @@ export class ChartManager {
     }
 
     /**
+     * Debug logging helper
+     */
+    debug(...args) {
+        if (this.debugMode) {
+            console.log('[ChartManager]', ...args);
+        }
+    }
+
+    /**
      * Initialize the chart canvas and Chart.js instance
      */
     async initializeChart() {
         try {
-            // Wait for Chart.js to load
+            this.debug('Starting chart initialization...');
+            
+            // Check if Chart.js is available
+            this.debug('Chart.js loaded:', typeof Chart !== 'undefined');
+            if (typeof Chart !== 'undefined') {
+                this.debug('Chart.js version:', Chart.version || 'Unknown');
+            }
+
+            // Wait for Chart.js to load if not available
             if (typeof Chart === 'undefined') {
-                console.warn('Chart.js not loaded yet, waiting...');
+                this.debug('Chart.js not loaded yet, waiting...');
                 await this.waitForChartJS();
             }
 
+            // Find canvas element
             this.canvas = document.getElementById('historyChart');
             if (!this.canvas) {
                 throw new Error('Chart canvas element not found');
             }
 
-            // Create chart instance
-            this.chart = new Chart(this.canvas, this.chartConfig);
+            this.debug('Canvas element found:', {
+                id: this.canvas.id,
+                width: this.canvas.clientWidth,
+                height: this.canvas.clientHeight,
+                offsetWidth: this.canvas.offsetWidth,
+                offsetHeight: this.canvas.offsetHeight
+            });
+
+            // Check container dimensions
+            const container = this.canvas.closest('.chart-container');
+            if (container) {
+                const containerStyles = getComputedStyle(container);
+                this.debug('Container dimensions:', {
+                    height: containerStyles.height,
+                    width: containerStyles.width,
+                    display: containerStyles.display
+                });
+            }
+
+            // Create chart instance with error handling
+            try {
+                this.chart = new Chart(this.canvas, this.chartConfig);
+                this.debug('Chart instance created successfully');
+            } catch (chartError) {
+                throw new Error(`Chart creation failed: ${chartError.message}`);
+            }
             
             // Load historical data
+            this.debug('Loading historical data...');
             await this.loadHistoricalData();
             
-            console.log('Chart initialized successfully');
+            this.debug('Chart initialization completed successfully');
         } catch (error) {
             console.error('Failed to initialize chart:', error);
-            this.showChartError('Error al inicializar el gráfico');
+            this.showChartError(`Error al inicializar el gráfico: ${error.message}`);
         }
     }
 
@@ -193,16 +238,17 @@ export class ChartManager {
     async waitForChartJS() {
         return new Promise((resolve, reject) => {
             let attempts = 0;
-            const maxAttempts = 50;
+            const maxAttempts = 100; // Increased for better reliability
             
             const checkChart = () => {
                 attempts++;
                 if (typeof Chart !== 'undefined') {
+                    this.debug(`Chart.js loaded after ${attempts} attempts`);
                     resolve();
                 } else if (attempts >= maxAttempts) {
-                    reject(new Error('Chart.js failed to load'));
+                    reject(new Error(`Chart.js failed to load after ${maxAttempts} attempts`));
                 } else {
-                    setTimeout(checkChart, 100);
+                    setTimeout(checkChart, 50); // Check every 50ms
                 }
             };
             
@@ -214,19 +260,26 @@ export class ChartManager {
      * Load historical exchange rate data for the last 7 days
      */
     async loadHistoricalData() {
-        if (this.isLoading) return;
+        if (this.isLoading) {
+            this.debug('Already loading data, skipping...');
+            return;
+        }
         
         this.isLoading = true;
         this.showLoadingState();
 
         try {
+            this.debug('Generating historical data...');
+            
             // Generate date range for last 7 days
             const dates = this.generateDateRange(7);
+            this.debug('Generated dates:', dates.map(d => d.toDateString()));
+            
             const historicalRates = [];
 
-            // Since most free APIs don't provide historical BOB data,
-            // we'll simulate realistic historical data based on current trends
+            // Get current rate for simulation base
             const currentRate = await this.getCurrentRate();
+            this.debug('Current rate for simulation:', currentRate);
             
             for (let i = 0; i < dates.length; i++) {
                 const date = dates[i];
@@ -239,13 +292,32 @@ export class ChartManager {
                 });
             }
 
+            this.debug('Generated historical rates:', historicalRates);
+            
+            // Validate data before storing
+            if (historicalRates.length === 0) {
+                throw new Error('No historical data generated');
+            }
+
+            // Check for invalid rates
+            const invalidRates = historicalRates.filter(item => 
+                isNaN(item.rate) || item.rate <= 0 || item.rate > 20
+            );
+            
+            if (invalidRates.length > 0) {
+                this.debug('Invalid rates found:', invalidRates);
+                throw new Error('Invalid exchange rates generated');
+            }
+
             this.historicalData = historicalRates;
             this.updateChart(historicalRates);
             this.hideLoadingState();
             
+            this.debug('Historical data loaded successfully');
+            
         } catch (error) {
             console.error('Failed to load historical data:', error);
-            this.showChartError('Error al cargar datos históricos');
+            this.showChartError(`Error al cargar datos históricos: ${error.message}`);
         } finally {
             this.isLoading = false;
         }
@@ -256,21 +328,25 @@ export class ChartManager {
      */
     async getCurrentRate() {
         try {
+            this.debug('Fetching current exchange rate...');
             const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+            
+            if (!response.ok) {
+                throw new Error(`API request failed: ${response.status}`);
+            }
+            
             const data = await response.json();
-            return data.rates?.BOB || 6.96;
+            const rate = data.rates?.BOB || 6.96;
+            this.debug('Fetched current rate:', rate);
+            return rate;
         } catch (error) {
-            console.warn('Could not fetch current rate, using fallback');
+            this.debug('Could not fetch current rate, using fallback:', error.message);
             return 6.96; // Fallback rate
         }
     }
 
     /**
      * Generate realistic historical rates based on typical USD/BOB volatility
-     * @param {number} currentRate - Current exchange rate
-     * @param {number} daysAgo - How many days ago (0 = today)
-     * @param {number} totalDays - Total number of days
-     * @returns {number} Simulated historical rate
      */
     generateRealisticRate(currentRate, daysAgo, totalDays) {
         // BOB is relatively stable, typical daily variation is 0.01-0.05 BOB
@@ -297,8 +373,6 @@ export class ChartManager {
 
     /**
      * Generate array of dates for the last N days
-     * @param {number} days - Number of days to generate
-     * @returns {Array<Date>} Array of Date objects
      */
     generateDateRange(days) {
         const dates = [];
@@ -315,8 +389,6 @@ export class ChartManager {
 
     /**
      * Format date for chart display
-     * @param {Date} date - Date to format
-     * @returns {string} Formatted date string
      */
     formatDateForDisplay(date) {
         return date.toLocaleDateString('es-BO', {
@@ -328,21 +400,53 @@ export class ChartManager {
 
     /**
      * Update chart with new data
-     * @param {Array} historicalRates - Array of rate data
      */
     updateChart(historicalRates) {
-        if (!this.chart) return;
+        if (!this.chart) {
+            console.error('Chart not initialized');
+            return;
+        }
+        
+        if (!historicalRates || historicalRates.length === 0) {
+            console.error('No historical data to display');
+            return;
+        }
 
         const labels = historicalRates.map(item => item.formattedDate);
         const data = historicalRates.map(item => item.rate);
 
+        this.debug('Updating chart with data:', {
+            labels: labels,
+            data: data,
+            labelsCount: labels.length,
+            dataCount: data.length
+        });
+        
+        // Validate data consistency
+        if (labels.length !== data.length) {
+            console.error('Labels and data length mismatch:', {
+                labelsLength: labels.length,
+                dataLength: data.length
+            });
+            return;
+        }
+
+        // Update chart data
         this.chart.data.labels = labels;
         this.chart.data.datasets[0].data = data;
 
         // Update colors based on trend
         this.updateChartColors(data);
         
-        this.chart.update('active');
+        // Update chart with animation
+        try {
+            this.chart.update('active');
+            this.debug('Chart updated successfully');
+        } catch (updateError) {
+            console.error('Chart update failed:', updateError);
+            this.showChartError('Error al actualizar el gráfico');
+            return;
+        }
         
         // Update summary statistics
         this.updateChartSummary(historicalRates);
@@ -350,7 +454,6 @@ export class ChartManager {
 
     /**
      * Update chart colors based on trend
-     * @param {Array<number>} data - Rate data points
      */
     updateChartColors(data) {
         if (data.length < 2) return;
@@ -383,11 +486,13 @@ export class ChartManager {
 
     /**
      * Update chart summary with statistics
-     * @param {Array} historicalRates - Historical rate data
      */
     updateChartSummary(historicalRates) {
         const summaryElement = document.getElementById('chartSummary');
-        if (!summaryElement) return;
+        if (!summaryElement) {
+            this.debug('Chart summary element not found');
+            return;
+        }
 
         const rates = historicalRates.map(item => item.rate);
         const minRate = Math.min(...rates);
@@ -424,6 +529,8 @@ export class ChartManager {
                 </div>
             </div>
         `;
+        
+        this.debug('Chart summary updated');
     }
 
     /**
@@ -433,18 +540,7 @@ export class ChartManager {
         const container = document.getElementById('rate-history');
         if (container) {
             container.classList.add('loading');
-        }
-
-        // Show loading indicator on canvas
-        if (this.canvas) {
-            const ctx = this.canvas.getContext('2d');
-            ctx.fillStyle = '#f7fafc';
-            ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-            
-            ctx.fillStyle = '#a0aec0';
-            ctx.font = '16px Roboto';
-            ctx.textAlign = 'center';
-            ctx.fillText('Cargando datos históricos...', this.canvas.width / 2, this.canvas.height / 2);
+            this.debug('Loading state enabled');
         }
     }
 
@@ -455,16 +551,19 @@ export class ChartManager {
         const container = document.getElementById('rate-history');
         if (container) {
             container.classList.remove('loading');
+            this.debug('Loading state disabled');
         }
     }
 
     /**
      * Show error message in chart area
-     * @param {string} message - Error message to display
      */
     showChartError(message) {
         const container = document.getElementById('rate-history');
-        if (!container) return;
+        if (!container) {
+            console.error('Chart container not found for error display');
+            return;
+        }
 
         const errorDiv = document.createElement('div');
         errorDiv.className = 'chart-error';
@@ -484,12 +583,15 @@ export class ChartManager {
             chartContainer.innerHTML = '';
             chartContainer.appendChild(errorDiv);
         }
+        
+        this.debug('Error displayed:', message);
     }
 
     /**
      * Refresh chart data
      */
     async refresh() {
+        this.debug('Refreshing chart data...');
         await this.loadHistoricalData();
     }
 
@@ -499,6 +601,7 @@ export class ChartManager {
     resize() {
         if (this.chart) {
             this.chart.resize();
+            this.debug('Chart resized');
         }
     }
 
@@ -509,34 +612,42 @@ export class ChartManager {
         if (this.chart) {
             this.chart.destroy();
             this.chart = null;
+            this.debug('Chart destroyed');
         }
     }
 
     /**
-     * Get chart statistics
-     * @returns {Object} Chart statistics
+     * Get chart statistics for debugging
      */
     getStats() {
-        return {
+        const stats = {
             isInitialized: !!this.chart,
             hasData: this.historicalData.length > 0,
             dataPoints: this.historicalData.length,
             isLoading: this.isLoading,
-            lastUpdate: this.historicalData.length > 0 ? new Date().toISOString() : null
+            lastUpdate: this.historicalData.length > 0 ? new Date().toISOString() : null,
+            canvasFound: !!this.canvas,
+            chartJsLoaded: typeof Chart !== 'undefined'
         };
+        
+        this.debug('Chart stats:', stats);
+        return stats;
     }
 }
 
 // Initialize chart when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    // Wait a bit for other scripts to load
+    console.log('[ChartManager] DOM loaded, initializing chart...');
+    
+    // Small delay to ensure all scripts are loaded
     setTimeout(() => {
         try {
             window.chartManager = new ChartManager();
+            console.log('[ChartManager] Chart manager initialized');
         } catch (error) {
-            console.error('Failed to initialize chart manager:', error);
+            console.error('[ChartManager] Failed to initialize chart manager:', error);
         }
-    }, 1000);
+    }, 500); // Reduced delay for faster initialization
 });
 
 // Handle window resize
@@ -546,4 +657,5 @@ window.addEventListener('resize', () => {
     }
 });
 
+// Export for module use
 export { ChartManager };
