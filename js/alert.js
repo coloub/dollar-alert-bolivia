@@ -1,13 +1,38 @@
 /**
  * AlertManager - Handles alert configuration, storage, and checking
+ * Enhanced with visual alert display system
  */
 export class AlertManager {
     constructor() {
         this.storageKey = 'dollarAlertBolivia_settings';
         this.notificationPermission = false;
         this.alertHistory = [];
+        this.activeVisualAlert = null;
+        this.alertBanner = null;
         
         this.requestNotificationPermission();
+        this.initializeAlertBanner();
+    }
+
+    /**
+     * Initialize the visual alert banner
+     */
+    initializeAlertBanner() {
+        // Create alert banner if it doesn't exist
+        this.alertBanner = document.getElementById('alert-banner');
+        if (!this.alertBanner) {
+            this.alertBanner = document.createElement('div');
+            this.alertBanner.id = 'alert-banner';
+            this.alertBanner.className = 'alert-banner hidden';
+            
+            // Insert at the top of the page, after header
+            const header = document.querySelector('header');
+            if (header && header.nextSibling) {
+                header.parentNode.insertBefore(this.alertBanner, header.nextSibling);
+            } else {
+                document.body.insertBefore(this.alertBanner, document.body.firstChild);
+            }
+        }
     }
 
     /**
@@ -93,6 +118,7 @@ export class AlertManager {
         try {
             localStorage.removeItem(this.storageKey);
             this.memoryStorage = null;
+            this.hideVisualAlert(); // Hide any active visual alerts
             return true;
         } catch (error) {
             console.error('Failed to delete alert:', error.message);
@@ -107,20 +133,33 @@ export class AlertManager {
      */
     checkAlert(currentRate) {
         const alert = this.getAlert();
-        if (!alert || !alert.isActive) return false;
+        if (!alert || !alert.isActive) {
+            this.hideVisualAlert(); // Hide alert if no active alert config
+            return false;
+        }
 
         const { threshold, type } = alert;
         let shouldTrigger = false;
+        let alertMessage = '';
 
         switch (type) {
             case 'above':
                 shouldTrigger = currentRate >= threshold;
+                if (shouldTrigger) {
+                    alertMessage = `¡ALERTA! El dólar está por ENCIMA de su umbral de ${threshold.toFixed(2)} BOB. Precio actual: ${currentRate.toFixed(2)} BOB`;
+                }
                 break;
             case 'below':
                 shouldTrigger = currentRate <= threshold;
+                if (shouldTrigger) {
+                    alertMessage = `¡ALERTA! El dólar está por DEBAJO de su umbral de ${threshold.toFixed(2)} BOB. Precio actual: ${currentRate.toFixed(2)} BOB`;
+                }
                 break;
             case 'both':
                 shouldTrigger = Math.abs(currentRate - threshold) <= 0.01; // Within 1 cent
+                if (shouldTrigger) {
+                    alertMessage = `¡ALERTA! El dólar ha ALCANZADO su umbral de ${threshold.toFixed(2)} BOB. Precio actual: ${currentRate.toFixed(2)} BOB`;
+                }
                 break;
             default:
                 shouldTrigger = false;
@@ -128,9 +167,128 @@ export class AlertManager {
 
         if (shouldTrigger) {
             this.recordAlertTrigger(currentRate, alert);
+            this.showVisualAlert(alertMessage, type, currentRate, threshold);
+            
+            // Send browser notification
+            this.sendNotification(
+                'Dollar Alert Bolivia - ¡ALERTA!',
+                alertMessage
+            );
+        } else {
+            this.hideVisualAlert();
         }
 
         return shouldTrigger;
+    }
+
+    /**
+     * Show visual alert banner
+     * @param {string} message - Alert message
+     * @param {string} type - Alert type ('above', 'below', 'both')
+     * @param {number} currentRate - Current exchange rate
+     * @param {number} threshold - Alert threshold
+     */
+    showVisualAlert(message, type, currentRate, threshold) {
+        if (!this.alertBanner) {
+            this.initializeAlertBanner();
+        }
+
+        // Clear any existing content
+        this.alertBanner.innerHTML = '';
+
+        // Create alert content
+        const alertContent = document.createElement('div');
+        alertContent.className = 'alert-content';
+
+        // Alert icon
+        const alertIcon = document.createElement('div');
+        alertIcon.className = 'alert-icon';
+        alertIcon.innerHTML = '⚠️';
+
+        // Alert message
+        const alertMessage = document.createElement('div');
+        alertMessage.className = 'alert-message';
+        alertMessage.textContent = message;
+
+        // Rate comparison
+        const rateComparison = document.createElement('div');
+        rateComparison.className = 'rate-comparison';
+        
+        const direction = type === 'above' ? 'SUBIÓ' : type === 'below' ? 'BAJÓ' : 'CAMBIÓ';
+        const difference = Math.abs(currentRate - threshold);
+        rateComparison.innerHTML = `
+            <span class="rate-direction">${direction}</span>
+            <span class="rate-difference">${difference.toFixed(2)} BOB</span>
+        `;
+
+        // Close button
+        const closeButton = document.createElement('button');
+        closeButton.className = 'alert-close';
+        closeButton.innerHTML = '×';
+        closeButton.onclick = () => this.hideVisualAlert();
+
+        // Dismiss button
+        const dismissButton = document.createElement('button');
+        dismissButton.className = 'alert-dismiss';
+        dismissButton.textContent = 'Descartar por ahora';
+        dismissButton.onclick = () => this.hideVisualAlert();
+
+        // Assemble alert
+        alertContent.appendChild(alertIcon);
+        alertContent.appendChild(alertMessage);
+        alertContent.appendChild(rateComparison);
+        alertContent.appendChild(closeButton);
+        
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'alert-buttons';
+        buttonContainer.appendChild(dismissButton);
+        
+        this.alertBanner.appendChild(alertContent);
+        this.alertBanner.appendChild(buttonContainer);
+
+        // Set alert type class for styling
+        this.alertBanner.className = `alert-banner alert-${type}`;
+        
+        // Animate in
+        this.alertBanner.classList.remove('hidden');
+        setTimeout(() => {
+            this.alertBanner.classList.add('show');
+        }, 10);
+
+        // Store reference
+        this.activeVisualAlert = {
+            message,
+            type,
+            currentRate,
+            threshold,
+            timestamp: new Date().toISOString()
+        };
+
+        // Add pulsing effect to exchange rate display
+        const rateDisplay = document.getElementById('exchangeRate');
+        if (rateDisplay) {
+            rateDisplay.classList.add('rate-alert-pulse');
+            setTimeout(() => {
+                rateDisplay.classList.remove('rate-alert-pulse');
+            }, 3000);
+        }
+    }
+
+    /**
+     * Hide visual alert banner
+     */
+    hideVisualAlert() {
+        if (this.alertBanner && !this.alertBanner.classList.contains('hidden')) {
+            this.alertBanner.classList.remove('show');
+            this.alertBanner.classList.add('hiding');
+            
+            setTimeout(() => {
+                this.alertBanner.classList.add('hidden');
+                this.alertBanner.classList.remove('hiding');
+            }, 300);
+        }
+        
+        this.activeVisualAlert = null;
     }
 
     /**
@@ -272,7 +430,16 @@ export class AlertManager {
             threshold: alert?.threshold || null,
             triggerCount: history.length,
             lastTrigger: history.length > 0 ? history[history.length - 1] : null,
-            createdAt: alert?.createdAt || null
+            createdAt: alert?.createdAt || null,
+            hasActiveVisualAlert: !!this.activeVisualAlert
         };
+    }
+
+    /**
+     * Get current visual alert status
+     * @returns {Object|null} Current visual alert data
+     */
+    getCurrentVisualAlert() {
+        return this.activeVisualAlert;
     }
 }

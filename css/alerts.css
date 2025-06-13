@@ -1,0 +1,302 @@
+/* Visual Alert System Styles */
+
+/* Alert Banner Container */
+.alert-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: linear-gradient(135deg, #e53e3e, #c53030);
+    color: white;
+    padding: 0;
+    box-shadow: 0 4px 20px rgba(229, 62, 62, 0.3);
+    border-bottom: 3px solid #c53030;
+    transform: translateY(-100%);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+}
+
+.alert-banner.show {
+    transform: translateY(0);
+}
+
+.alert-banner.hiding {
+    transform: translateY(-100%);
+    opacity: 0;
+}
+
+.alert-banner.hidden {
+    display: none;
+}
+
+/* Alert Type Variations */
+.alert-banner.alert-above {
+    background: linear-gradient(135deg, #e53e3e, #c53030);
+    border-bottom-color: #c53030;
+}
+
+.alert-banner.alert-below {
+    background: linear-gradient(135deg, #38a169, #2f855a);
+    border-bottom-color: #2f855a;
+}
+
+.alert-banner.alert-both {
+    background: linear-gradient(135deg, #d69e2e, #b7791f);
+    border-bottom-color: #b7791f;
+}
+
+/* Alert Content Layout */
+.alert-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.alert-icon {
+    font-size: 2rem;
+    animation: alertPulse 1.5s infinite;
+    flex-shrink: 0;
+}
+
+@keyframes alertPulse {
+    0%, 100% { 
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% { 
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+.alert-message {
+    flex: 1;
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.4;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.rate-comparison {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 10px 15px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    backdrop-filter: blur(5px);
+    flex-shrink: 0;
+}
+
+.rate-direction {
+    font-size: 0.9rem;
+    font-weight: 500;
+    opacity: 0.9;
+    display: block;
+}
+
+.rate-difference {
+    font-size: 1.2rem;
+    font-weight: 700;
+    display: block;
+    margin-top: 2px;
+}
+
+.alert-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    line-height: 1;
+    padding: 5px;
+}
+
+.alert-close:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Alert Buttons */
+.alert-buttons {
+    text-align: center;
+    padding: 0 20px 20px;
+}
+
+.alert-dismiss {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 8px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+    backdrop-filter: blur(5px);
+}
+
+.alert-dismiss:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+}
+
+/* Rate Display Alert Pulse */
+.rate-alert-pulse {
+    animation: ratePulse 1s ease-in-out 3;
+    position: relative;
+}
+
+@keyframes ratePulse {
+    0% { 
+        transform: scale(1);
+        color: #2c5282;
+    }
+    50% { 
+        transform: scale(1.05);
+        color: #e53e3e;
+        text-shadow: 0 0 10px rgba(229, 62, 62, 0.5);
+    }
+    100% { 
+        transform: scale(1);
+        color: #2c5282;
+    }
+}
+
+/* Push content down when alert is shown */
+body.alert-active {
+    padding-top: 120px;
+    transition: padding-top 0.3s ease;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .alert-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+        padding: 15px;
+    }
+
+    .alert-message {
+        font-size: 1rem;
+        order: 1;
+    }
+
+    .alert-icon {
+        font-size: 1.8rem;
+        order: 0;
+    }
+
+    .rate-comparison {
+        order: 2;
+        padding: 8px 12px;
+    }
+
+    .alert-close {
+        top: 5px;
+        right: 10px;
+        font-size: 1.5rem;
+    }
+
+    .rate-difference {
+        font-size: 1.1rem;
+    }
+    
+    body.alert-active {
+        padding-top: 140px;
+    }
+}
+
+@media (max-width: 480px) {
+    .alert-content {
+        padding: 12px;
+    }
+
+    .alert-message {
+        font-size: 0.95rem;
+    }
+
+    .alert-icon {
+        font-size: 1.5rem;
+    }
+
+    .rate-comparison {
+        padding: 6px 10px;
+    }
+
+    .rate-direction {
+        font-size: 0.8rem;
+    }
+
+    .rate-difference {
+        font-size: 1rem;
+    }
+    
+    body.alert-active {
+        padding-top: 160px;
+    }
+}
+
+/* Alert Banner Animation Effects */
+.alert-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    animation: alertShine 3s infinite;
+}
+
+@keyframes alertShine {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .alert-banner {
+        border-bottom-width: 5px;
+    }
+    
+    .alert-message {
+        font-weight: 700;
+    }
+    
+    .alert-close {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 50%;
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    .alert-banner {
+        transition: none;
+    }
+    
+    .alert-icon {
+        animation: none;
+    }
+    
+    .alert-banner::before {
+        animation: none;
+    }
+    
+    .rate-alert-pulse {
+        animation: none;
+    }
+}
