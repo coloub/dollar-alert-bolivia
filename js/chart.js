@@ -656,6 +656,3 @@ window.addEventListener('resize', () => {
         window.chartManager.resize();
     }
 });
-
-// Export for module use
-export { ChartManager };
